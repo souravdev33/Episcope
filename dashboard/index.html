@@ -1,11 +1,94 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EpiScope | Bangladesh surveillance prototype</title><link rel="stylesheet" href="style.css"><script src="https://cdn.jsdelivr.net/npm/d3@7"></script></head><body>
-<header><div><p class="eyebrow">BANGLADESH · DECISION SUPPORT PROTOTYPE</p><h1>EpiScope</h1><p class="sub">Weekly surveillance, forecast and response planning</p></div><div class="fresh" id="fresh">Waiting for dashboard data…</div></header>
-<aside class="notice"><b>SYNTHETIC DEMONSTRATION</b> · Prototype output. Not an official health forecast. Tile map is schematic and not geographic boundary data. Counts 1–4 are suppressed.</aside>
-<nav class="controls"><label>Disease <select id="disease"></select></label><label>District <select id="district"><option value="ALL">All districts</option></select></label><label>Forecast horizon <select id="horizon"><option>1</option><option>2</option><option>3</option><option>4</option></select> week(s)</label></nav>
-<main><section class="card"><div class="cardhead"><div><h2>District signal</h2><p>Latest incidence proxy · schematic district tiles</p></div></div><div id="map" class="viz"></div></section>
-<section class="card"><div class="cardhead"><div><h2>Observed and forecast</h2><p>Weekly reports and 80% interval</p></div></div><div id="series" class="viz"></div></section>
-<section class="card"><div class="cardhead"><div><h2>Seasonality</h2><p>District × epi-week · suppressed cells hatch</p></div></div><div id="heat" class="viz scroll"></div></section>
-<section class="card"><div class="cardhead"><div><h2>Resource plan</h2><p>Forecast demand, current stock and suggested units</p></div></div><div id="allocation" class="viz scroll"></div></section>
-<section class="card"><div class="cardhead"><div><h2>Early warnings</h2><p>Recent 8-week z-score flags · review reporting completeness</p></div></div><div id="warnings" class="viz scroll"></div></section>
-<section class="card"><div class="cardhead"><div><h2>Data quality</h2><p>Latest processing batch</p></div><div id="quality" class="quality"></div></section></main>
-<footer>Aggregated district-week data only · Prepared for teaching use · Interpret with local surveillance expertise</footer><script src="app.js"></script></body></html>
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#112d3e">
+  <meta name="description" content="EpiScope district surveillance and response-planning prototype">
+  <title>EpiScope | District health intelligence</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#" aria-label="EpiScope home">
+      <span class="brand-mark" aria-hidden="true">E</span>
+      <span><strong>EpiScope</strong><small>Surveillance and response planning</small></span>
+    </a>
+    <div class="topbar-meta"><span class="status-dot"></span><span>Teaching prototype</span><span class="pill">Synthetic data</span></div>
+  </header>
+
+  <main class="page-shell">
+    <section class="page-intro">
+      <div>
+        <p class="eyebrow">BANGLADESH <span>/</span> DISTRICT OVERVIEW</p>
+        <h1>Health intelligence</h1>
+        <p class="intro-copy">A coordinated view of weekly signals, planning estimates, and response readiness.</p>
+      </div>
+      <div class="update-block">
+        <span class="update-label">DATA REFRESH</span>
+        <strong id="fresh">Loading dashboard data...</strong>
+        <span class="update-note">Synthetic demonstration</span>
+      </div>
+    </section>
+
+    <aside class="notice" role="note">
+      <span class="notice-icon" aria-hidden="true">i</span>
+      <p><strong>Prototype only.</strong> This dashboard uses synthetic data and is not an official health forecast. District tiles are schematic, not geographic boundaries. Counts from 1 to 4 are suppressed in selected views.</p>
+    </aside>
+
+    <section class="filter-panel" aria-label="Dashboard filters">
+      <div class="filter-heading">
+        <div><span class="section-kicker">EXPLORE THE DATA</span><h2>Filters</h2></div>
+        <button id="reset" class="reset-button" type="button">Reset filters</button>
+      </div>
+      <div class="filters">
+        <label class="filter-control"><span>Disease</span><select id="disease" aria-label="Select disease"></select></label>
+        <label class="filter-control"><span>District</span><select id="district" aria-label="Select district"><option value="ALL">All districts</option></select></label>
+        <label class="filter-control"><span>Forecast horizon</span><select id="horizon" aria-label="Select forecast horizon"><option value="1">1 week ahead</option><option value="2">2 weeks ahead</option><option value="3">3 weeks ahead</option><option value="4">4 weeks ahead</option></select></label>
+      </div>
+    </section>
+
+    <section class="dashboard-grid" aria-label="Surveillance dashboard">
+      <article class="card map-card">
+        <div class="card-heading"><div><span class="section-kicker">SPATIAL SIGNAL</span><h2>District activity</h2><p>Latest reported volume for the selected disease</p></div><span class="view-tag">SCHEMATIC</span></div>
+        <div id="map" class="viz map-viz"></div>
+        <div class="map-foot"><span><i class="legend-low"></i> Lower reports</span><span class="legend-gradient" aria-hidden="true"></span><span>Higher reports</span><span class="map-foot-note">Select a tile to filter the dashboard</span></div>
+      </article>
+
+      <article class="card trend-card">
+        <div class="card-heading"><div><span class="section-kicker">SHORT-TERM OUTLOOK</span><h2>Observed and forecast</h2><p>Weekly reports with an illustrative 80% interval</p></div><span class="view-tag">WEEKLY</span></div>
+        <div id="series" class="viz trend-viz"></div>
+        <div class="chart-legend"><span><i class="legend-observed"></i> Observed</span><span><i class="legend-forecast"></i> Forecast</span><span><i class="legend-band"></i> 80% interval</span></div>
+      </article>
+
+      <article class="card heat-card">
+        <div class="card-heading"><div><span class="section-kicker">SEASONAL PATTERN</span><h2>District by epidemiological week</h2><p>Weekly case counts across the available years</p></div><span class="view-tag">WEEK 01-52</span></div>
+        <div class="heat-axis"><span>District</span><span>Week of year</span></div>
+        <div id="heat" class="viz heat-viz scroll"></div>
+        <div class="card-footnote"><span class="suppression-key"></span> Hatched cells are suppressed or contain no reportable count.</div>
+      </article>
+
+      <article class="card allocation-card">
+        <div class="card-heading"><div><span class="section-kicker">RESPONSE PLANNING</span><h2>Illustrative resource plan</h2><p>Estimated demand, stock, and suggested units</p></div><span class="view-tag">PLANNING AID</span></div>
+        <div id="allocation" class="viz table-viz scroll"></div>
+        <div class="card-footnote">Synthetic planning values; recommendations are not an optimized deployment plan.</div>
+      </article>
+
+      <article class="card warnings-card">
+        <div class="card-heading"><div><span class="section-kicker">SIGNALS TO REVIEW</span><h2>Early-warning flags</h2><p>Recent rises relative to an 8-week baseline</p></div><span class="view-tag alert-tag">HUMAN REVIEW</span></div>
+        <div id="warnings" class="viz table-viz scroll"></div>
+        <div class="card-footnote">A flag is a statistical signal, not a confirmed outbreak. Check reporting completeness and local context.</div>
+      </article>
+
+      <article class="card quality-card">
+        <div class="card-heading"><div><span class="section-kicker">PIPELINE HEALTH</span><h2>Data quality</h2><p>Latest processing batch</p></div><span class="view-tag">INGESTION</span></div>
+        <div id="quality" class="quality-grid"></div>
+      </article>
+    </section>
+
+    <footer class="page-footer"><span><strong>EpiScope</strong> - CSE 4345 Big Data Analytics</span><span>Aggregated synthetic demonstration. Interpret with local surveillance expertise.</span></footer>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>
