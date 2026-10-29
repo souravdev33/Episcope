@@ -1,0 +1,11 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>EpiScope | Bangladesh surveillance prototype</title><link rel="stylesheet" href="style.css"><script src="https://cdn.jsdelivr.net/npm/d3@7"></script></head><body>
+<header><div><p class="eyebrow">BANGLADESH · DECISION SUPPORT PROTOTYPE</p><h1>EpiScope</h1><p class="sub">Weekly surveillance, forecast and response planning</p></div><div class="fresh" id="fresh">Waiting for dashboard data…</div></header>
+<aside class="notice"><b>SYNTHETIC DEMONSTRATION</b> · Prototype output. Not an official health forecast. Tile map is schematic and not geographic boundary data. Counts 1–4 are suppressed.</aside>
+<nav class="controls"><label>Disease <select id="disease"></select></label><label>District <select id="district"><option value="ALL">All districts</option></select></label><label>Forecast horizon <select id="horizon"><option>1</option><option>2</option><option>3</option><option>4</option></select> week(s)</label></nav>
+<main><section class="card"><div class="cardhead"><div><h2>District signal</h2><p>Latest incidence proxy · schematic district tiles</p></div></div><div id="map" class="viz"></div></section>
+<section class="card"><div class="cardhead"><div><h2>Observed and forecast</h2><p>Weekly reports and 80% interval</p></div></div><div id="series" class="viz"></div></section>
+<section class="card"><div class="cardhead"><div><h2>Seasonality</h2><p>District × epi-week · suppressed cells hatch</p></div></div><div id="heat" class="viz scroll"></div></section>
+<section class="card"><div class="cardhead"><div><h2>Resource plan</h2><p>Forecast demand, current stock and suggested units</p></div></div><div id="allocation" class="viz scroll"></div></section>
+<section class="card"><div class="cardhead"><div><h2>Early warnings</h2><p>Recent 8-week z-score flags · review reporting completeness</p></div></div><div id="warnings" class="viz scroll"></div></section>
+<section class="card"><div class="cardhead"><div><h2>Data quality</h2><p>Latest processing batch</p></div><div id="quality" class="quality"></div></section></main>
+<footer>Aggregated district-week data only · Prepared for teaching use · Interpret with local surveillance expertise</footer><script src="app.js"></script></body></html>
