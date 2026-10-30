@@ -74,9 +74,4 @@ See [policy_brief.md](policy_brief.md); format as exactly two pages when creatin
 | Agreed share (must sum to 100%) |  |  |  |  |
 | Signatures |  |  |  |  |
 
-## Appendix C. Individual reflections (complete individually)
 
-**Sourav:** [Write a half-page reflection in your own words: decisions, contribution, evidence, learning, limitations.]  
-**Aritra:** [Write individually.]  
-**Sakib:** [Write individually.]  
-**Noha:** [Write individually.]
