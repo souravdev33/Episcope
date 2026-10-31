@@ -1,4 +1,4 @@
-# EpiScope proposal (draft)
+﻿# EpiScope proposal (draft)
 
 ## Problem and stakeholders
 
@@ -14,7 +14,7 @@ EpiScope is a teaching prototype for turning district-level surveillance signals
 
 **C4 freshness vs. cost:** daily batch is sufficient for weekly district planning on a student laptop. It does not meet the optional five-minute streaming target.
 
-**C5 accuracy vs. interpretability:** a trailing mean/z-score flag and seasonal-naive blend are transparent baselines. They are not demonstrated to outperform alternatives and do not use weather covariates in this draft.
+**C5 accuracy vs. interpretability:** a trailing mean/z-score flag remains transparent. With public weather, the forecast prototype adds lagged rainfall, temperature, and humidity in a per-district ridge model; otherwise it uses a seasonal/recent baseline. Neither model has completed a rolling-origin backtest.
 
 ## Architecture and tools
 
@@ -24,4 +24,5 @@ Python seeded generator → Spark local batch validation / de-identification →
 
 The brief states a three-person team, but four names were provided. Proposed work split pending instructor approval: Sourav—problem analysis and quality; Aritra—generator and pipeline; Sakib—analytics and evaluation; Noha—serving, dashboard and policy. Everyone should review and contribute outside their lead area. Risk register: synthetic realism is weak; late/corrected reports distort weeks; small-cell combinations may leak counts; local storage may not scale; thresholds may create alert fatigue; generated results may be mistaken for official estimates. Mitigations: prominent synthetic labels, reproducible seed, quarantine, limited aggregation, threshold review, and group-run evidence before submission.
 
-**Data provenance:** the current generator creates synthetic records and synthetic population denominators. It does not yet fetch/cite real BBS/WorldPop population, geoboundaries or Open-Meteo weather. These must be acquired with source/licence metadata before claiming those requirements complete.
+**Data provenance:** S4-S6 records are synthetic. Public-data mode downloads geoBoundaries ADM2 GeoJSON, WorldPop 2022 age/sex population estimates, and Open-Meteo ERA5-Land daily weather (2021-2025), caching responses and writing URLs, licence notes, retrieval time, and SHA-256 checksums to data/reference/source_metadata.json. WorldPop estimates are modelled rather than official BBS census totals. Run this mode and retain its metadata as evidence.
+

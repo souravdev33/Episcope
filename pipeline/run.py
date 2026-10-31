@@ -1,10 +1,10 @@
-"""Local Spark medallion pipeline with quarantine, de-identification and lineage."""
-import argparse, hashlib, json, os
+﻿"""Local Spark medallion pipeline with quarantine, de-identification and lineage."""
+import argparse, hashlib, json, os, shutil
 from datetime import datetime, timezone
 from pathlib import Path
 
 def main():
-    ap=argparse.ArgumentParser(); ap.add_argument('--input',default='data/input'); ap.add_argument('--output',default='data/lake'); a=ap.parse_args()
+    ap=argparse.ArgumentParser(); ap.add_argument('--input',default='data/input'); ap.add_argument('--output',default='data/lake'); ap.add_argument('--reference',default='data/reference'); a=ap.parse_args()
     from pyspark.sql import SparkSession, functions as F, types as T
     spark=(SparkSession.builder.appName('EpiScope').master('local[*]').config('spark.sql.shuffle.partitions','8').config('spark.sql.adaptive.enabled','true').getOrCreate())
     src=Path(a.input); out=Path(a.output); loaded=datetime.now(timezone.utc).isoformat()
@@ -52,7 +52,7 @@ def main():
       .withColumn('onset_date',F.to_date('onset_date')).withColumn('report_date',F.to_date('report_date'))
       .withColumn('age_band',F.when(F.col('age_years')<5,'0-4').when(F.col('age_years')<18,'5-17').when(F.col('age_years')<50,'18-49').when(F.col('age_years')<65,'50-64').otherwise('65+'))
       .withColumn('disease',F.when(F.col('icd10_code').isin('A90','A91'),'dengue').when(F.col('icd10_code').isin('A00','A09'),'diarrhoea').when(F.col('icd10_code').isin('J10','J11'),'influenza').when(F.col('icd10_code').between('B50','B54'),'malaria').otherwise('other'))
-      .withColumn('epi_year',F.year('onset_date')).withColumn('epi_week',F.weekofyear('onset_date'))
+      .withColumn('epi_year',F.year(F.expr('date_add(onset_date, CASE WHEN dayofweek(onset_date) = 1 THEN -3 ELSE 5 - dayofweek(onset_date) END)'))).withColumn('epi_week',F.weekofyear('onset_date'))
       .drop('patient_id','age_years','_facility_ok','_duplicate_count','quarantine_reason')
       .dropDuplicates(['encounter_id']))
     silver=out/'silver'/'encounters'
@@ -60,10 +60,29 @@ def main():
     gold=(clean.filter(F.col('disease')!='other').groupBy('district','disease','epi_year','epi_week')
       .agg(F.count('*').alias('cases'),F.sum('admitted').alias('admissions'),F.sum('lab_confirmed').alias('lab_confirmed'),
            F.max('loaded_at').alias('freshness'),F.collect_set('batch_id').alias('source_batch_ids')))
+    reference=Path(a.reference)
+    if (reference/'weather.csv').exists():
+        weather=(spark.read.option('header',True).option('inferSchema',True).csv(str(reference/'weather.csv'))
+          .withColumn('date',F.to_date('date')).withColumn('epi_year',F.year(F.expr('date_add(date, CASE WHEN dayofweek(date) = 1 THEN -3 ELSE 5 - dayofweek(date) END)')))
+          .withColumn('epi_week',F.weekofyear('date')))
+        weekly_weather=(weather.groupBy('district','epi_year','epi_week')
+          .agg(F.sum('precipitation_mm').alias('precipitation_mm'),
+               F.avg('temperature_c').alias('temperature_c'),
+               F.avg('relative_humidity_pct').alias('relative_humidity_pct')))
+        gold=gold.join(weekly_weather,['district','epi_year','epi_week'],'left')
     gold.write.mode('overwrite').partitionBy('epi_year','epi_week').parquet(str(out/'gold'/'weekly'))
     quality={'batch_id':batch,'loaded_at':loaded,'rows_in':df.count(),'rows_clean':clean.count(),'rows_quarantined':quarantine.count(),
              'rule_count':len(checks),'rules':{name:tagged.filter(test).count() for name,test in checks}}
     (out/'gold').mkdir(parents=True,exist_ok=True); (out/'gold'/'quality_report.json').write_text(json.dumps(quality,indent=2),encoding='utf-8')
+    if (reference/'boundaries.geojson').exists():
+        refout=out/'reference'; refout.mkdir(parents=True,exist_ok=True)
+        shutil.copy2(reference/'boundaries.geojson',refout/'boundaries.geojson')
+    if (reference/'source_metadata.json').exists():
+        refout=out/'reference'; refout.mkdir(parents=True,exist_ok=True)
+        shutil.copy2(reference/'source_metadata.json',refout/'source_metadata.json')
     # Silver/gold records retain bronze batch lineage via source_batch_ids in gold.
     spark.stop(); print(json.dumps(quality,indent=2))
 if __name__=='__main__': main()
+
+
+

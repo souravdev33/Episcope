@@ -21,19 +21,19 @@
 
 EpiScope demonstrates a small end-to-end workflow for turning synthetic health-facility encounters into aggregated district-level views:
 
-1. Generate reproducible synthetic facilities, population denominators, encounters, stock snapshots, and a separate outbreak truth file.
+1. Generate synthetic encounters, facilities, stocks, and outbreak truth; optionally download public geography, population, and weather inputs.
 2. Use PySpark to load encounter files, retain raw input in a bronze Parquet layer, validate records, quarantine quality failures, and de-identify valid records into silver.
 3. Aggregate district, disease, and epidemiological-week counts into gold Parquet data.
 4. Create prototype outbreak flags, short-horizon planning estimates, an illustrative allocation, and aggregated JSON for a D3 dashboard.
 5. Explore the resulting views using district and disease filters.
 
-All included epidemiology and population values are synthetic. This prototype does not currently retrieve official Bangladesh data, measured weather, or administrative boundary files.
+Encounter, facility, stock, and injected-outbreak data are synthetic. With --with-public-data, the project downloads real ADM2 boundaries from geoBoundaries, 2022 modelled population/age-sex estimates from WorldPop, and daily 2021-2025 ERA5-Land weather from Open-Meteo. WorldPop values are modelled estimates, not official BBS census counts. The public-data download has not yet been run in this workspace; the first run needs internet access.
 
 ## Dashboard
 
 The dashboard includes:
 
-- District signal tiles. These are schematic tiles, not a geographic map.
+- District choropleth using public ADM2 geometry when public data is enabled; otherwise a clearly labelled schematic tile view.
 - A weekly observed-count and forecast view with an illustrative 80% range.
 - A district-by-week seasonal heat view.
 - A district resource-planning table.
@@ -66,7 +66,7 @@ Aggregated dashboard.json
 D3.js dashboard
 ~~~
 
-The local pipeline uses Spark in local mode and Parquet files on disk. MinIO is scaffolded in docker-compose.yml but is not connected to the current pipeline. Streaming and ACID lakehouse tables are not implemented.
+The local pipeline uses Spark in local mode and Parquet files on disk. When public data is enabled, daily district weather is aggregated into weekly gold records and lagged weather signals are used by the district forecast prototype. MinIO is scaffolded in docker-compose.yml but is not connected to the current pipeline. Streaming and ACID lakehouse tables are not implemented.
 
 ## Requirements
 
@@ -110,15 +110,15 @@ pip install -r requirements.txt
 Set Java 17 for this PowerShell window if needed (see above), then run:
 
 ~~~powershell
-python -m orchestration.run_all --scale 0.002 --seed 4345
+python -m orchestration.run_all --scale 0.04 --seed 4345 --with-public-data
 ~~~
 
-The orchestrator generates a private local .env file on first run for salted ID hashing. That file is ignored by Git; keep it private and preserve it between runs so the hash salt remains stable.
+The --with-public-data option retrieves S1-S3, caches API responses under data/reference/cache/, and records source URLs, dates, licences, and file checksums in data/reference/source_metadata.json. The first public-data run needs internet access and may take several minutes; reruns reuse cached files. The orchestrator also creates a private local .env for salted ID hashing. It is ignored by Git; keep it private and preserve it between runs.
 
-The sample scale generates 50,000 encounter rows. A scale of 1 targets 25 million rows and can take much longer:
+The default scale factor (SF) is 0.04, which generates 1,000,000 synthetic encounters. The generator is parameterized by `--scale` and `--seed`; with SF=1 it targets exactly 25,000,000 records across 2021–2025. The same seed and population input reproduce the same records. Changing scale replaces the previous numbered generator chunks so stale rows cannot inflate the next run. Use `--with-public-data` to include S1–S3 reference inputs. SF=1 requires substantially more disk space and runtime:
 
 ~~~powershell
-python -m orchestration.run_all --scale 1 --seed 4345
+python -m orchestration.run_all --scale 1 --seed 4345 --with-public-data
 ~~~
 
 ### 3. Start the dashboard
@@ -151,7 +151,7 @@ The bronze batch key is derived from source file checksums, so replaying an iden
 
 ## Sample run record
 
-For scale 0.002 with seed 4345, the local sample run generated 50,000 synthetic encounters. Spark reported 47,438 valid rows and 2,562 quarantined rows. The analytics export contained 19,013 district-disease-week rows and 147 threshold flags.
+For scale 0.04 with seed 4345, the project generates 1,000,000 synthetic encounter records. Exact clean/quarantine counts and dashboard aggregates are written to the local pipeline output after each run.
 
 These are run-specific prototype outputs, not public-health estimates or validated detection results. The flags have not been evaluated against the separate outbreak truth file, and runtime/scaling benchmarks have not been completed.
 
@@ -159,19 +159,19 @@ These are run-specific prototype outputs, not public-health estimates or validat
 
 | Area | Current prototype | Important limitation |
 |---|---|---|
-| Synthetic data | Seeded records, seasonal/geographic weighting, injected events, reporting-delay episode | No measured weather drivers; no public S1-S3 data |
+| Data sources | Synthetic S4-S6 plus optional public S1-S3 acquisition | Public download still needs to be run and archived locally; S7 is not included |
 | Data quality | 15 checks, reason-coded quarantine, duplicate encounter check | Cross-facility deduplication and hidden-drop performance need evaluation |
 | Privacy | Patient ID hash in silver; direct ID removed; age converted to bands | Review all export paths and complementary suppression before any wider release |
 | Detection | Trailing 8-week mean/standard deviation threshold | Heuristic, not a validated outbreak detector; no completed threshold trade-off evaluation |
-| Forecasting | Annual-lag/recent-level blend with an illustrative interval | No weather covariates, trained model, rolling-origin backtest, or coverage result |
+| Forecasting | District model uses lagged rain, temperature, and humidity when S3 is present; otherwise seasonal/recent baseline | No rolling-origin backtest or interval-coverage result |
 | Allocation | Demand-weighted illustrative heuristic and five budget points | Not the required linear/integer program; not validated against a proportional baseline |
 | Calendar | Seasonal planning hypothesis | Not derived from fitted seasonal decomposition |
-| Dashboard | D3 v7, five coordinated views, district/disease filters | Schematic tiles instead of boundary choropleth; no time brush or user study |
+| Dashboard | D3 v7, five coordinated views, choropleth when S1 is present, district/disease filters | No time brush or documented user study |
 | Scale and performance | Local Spark; broadcast facility join and AQE enabled | No SF 0.25/0.5/1 measurements or before/after Spark UI evidence |
 
 ## Data and privacy
 
-- Encounter, facility, stock, and population files created by the generator are synthetic.
+- Encounter, facility, stock, and outbreak files are synthetic. Population denominators are synthetic in the quick mode and WorldPop modelled estimates in public-data mode.
 - The ground-truth outbreak file is separate from analytics inputs and must not be used by the detector.
 - Patient identifiers are present only in the bronze input and are salted/hashed before silver.
 - The local salt is stored in the ignored .env file; do not commit it or share it.
@@ -196,11 +196,11 @@ docker-compose.yml Optional MinIO service scaffold
 
 | Requirement group | Main files | Status |
 |---|---|---|
-| ING-1 to ING-4 | generator/, pipeline/run.py | Partial: local batch and Parquet layers; incremental behavior needs further evidence |
+| ING-1 to ING-4 | generator/, pipeline/run.py | Partial: local batch and Parquet layers; incremental behavior needs further evidence |\n| S1-S3 | generator/acquire_public.py, pipeline/run.py | geoBoundaries, WorldPop, and Open-Meteo acquisition and weather integration; run locally to cache the files |
 | DQ-1 to DQ-3 | pipeline/run.py | Prototype checks, quarantine, and batch lineage |
 | PRV-1 to PRV-2 | pipeline/run.py, analytics/run.py | Hashing and partial suppression; complete export audit still needed |
 | AN-1 to AN-9 | analytics/run.py | Baselines and illustrative plan; required quantitative evaluation and LP remain incomplete |
-| VIS-1 to VIS-4 | dashboard/, analytics/run.py | D3 views and filters; actual geographic choropleth and full interaction requirements remain incomplete |
+| VIS-1 to VIS-4 | dashboard/, analytics/run.py | D3 views, linked filters, public-boundary choropleth; time brush and usability evidence remain incomplete |
 | ENG-1 | orchestration/run_all.py | Local one-command sample run |
 | ENG-2 to ENG-4 | Not complete | Scaling evidence, optimization comparison, automated tests and orchestration retries remain to be done |
 
@@ -215,4 +215,7 @@ Generative AI assistance is disclosed in [AI_USAGE.md](AI_USAGE.md). Team member
 ## License
 
 Coursework prototype for CSE 4345. No production or clinical use is intended.
+
+
+
 

@@ -1,15 +1,272 @@
-﻿let D,sel='ALL',dis='dengue',hor=1;const $=s=>document.querySelector(s);
-function init(x){D=x;$('#fresh').textContent='Updated '+new Date(x.generated_at).toLocaleString();x.diseases.forEach(d=>$('#disease').add(new Option(d,d)));x.districts.forEach(d=>$('#district').add(new Option(d,d)));$('#disease').onchange=()=>{dis=$('#disease').value;draw()};$('#district').onchange=()=>{sel=$('#district').value;draw()};$('#horizon').onchange=()=>{hor=+$('#horizon').value;draw()};draw()}
-$('#reset').onclick=()=>{dis=D.diseases[0];sel='ALL';hor=1;$('#disease').value=dis;$('#district').value=sel;$('#horizon').value='1';draw()};
-function choose(d){sel=d;$('#district').value=d;draw()}
-function draw(){map();series();heat();allocation();warnings();quality()}
-function map(){let e=$('#map');e.innerHTML='';let w=e.clientWidth||600,h=260,s=d3.select(e).append('svg').attr('viewBox','0 0 '+w+' '+h);let all=D.heatmap.filter(r=>r.disease===dis),yr=d3.max(all,r=>r.year),m=new Map();all.filter(r=>r.year===yr).forEach(r=>m.set(r.district,(m.get(r.district)||0)+(r.cases||0)));let max=d3.max([...m.values()])||1,scale=d3.scaleSequential([0,max],d3.interpolateViridis),cols=8;D.districts.forEach((d,i)=>{let x=10+(i%cols)*(w-20)/cols,y=8+Math.floor(i/cols)*29,ww=(w-20)/cols-3,v=m.get(d)||0,g=s.append('g').style('cursor','pointer').on('click',()=>choose(sel===d?'ALL':d));g.append('rect').attr('class','tile '+(sel===d?'selected':'')).attr('x',x).attr('y',y).attr('width',ww).attr('height',24).attr('rx',4).attr('fill',v<5?'#d9e0e3':scale(v));g.append('text').attr('x',x+ww/2).attr('y',y+15).attr('text-anchor','middle').attr('fill',v>max*.58?'white':'#203744').text(d.slice(0,9))});s.append('text').attr('class','legend').attr('x',10).attr('y',h-5).text('District report volume - schematic tiles, not geographic boundaries')}
-function series(){let e=$('#series');e.innerHTML='';let z=D.heatmap.filter(r=>r.disease===dis&&(sel==='ALL'||r.district===sel)),m=new Map();z.forEach(r=>{let k=r.year+'-'+String(r.week).padStart(2,'0');m.set(k,(m.get(k)||0)+(r.cases||0))});let p=[...m].sort((a,b)=>a[0].localeCompare(b[0])).slice(-24).map(x=>({k:x[0],v:x[1]})),fs=D.forecasts.filter(r=>r.disease===dis&&(sel==='ALL'||r.district===sel)&&r.horizon===hor),f=d3.sum(fs,r=>r.mean||0),w=e.clientWidth||600,h=260,margin={l:40,r:12,t:12,b:35},s=d3.select(e).append('svg').attr('viewBox','0 0 '+w+' '+h),x=d3.scaleLinear([0,Math.max(1,p.length-1+hor)],[margin.l,w-margin.r]),y=d3.scaleLinear([0,Math.max(1,d3.max(p,r=>r.v)||1,f*1.3)],[h-margin.b,margin.t]);s.append('g').attr('class','axis').attr('transform','translate(0,'+(h-margin.b)+')').call(d3.axisBottom(x).ticks(5));s.append('g').attr('class','axis').attr('transform','translate('+margin.l+',0)').call(d3.axisLeft(y).ticks(5));s.append('path').datum(p).attr('fill','none').attr('stroke','#137c78').attr('stroke-width',2.5).attr('d',d3.line().x((r,i)=>x(i)).y(r=>y(r.v)));if(fs.length){let lo=d3.sum(fs,r=>r.lower80||0),hi=d3.sum(fs,r=>r.upper80||0);s.append('rect').attr('x',x(p.length-1)).attr('y',y(hi)).attr('width',Math.max(3,x(p.length-1+hor)-x(p.length-1))).attr('height',Math.max(2,y(lo)-y(hi))).attr('fill','#ecc77d').attr('opacity',.5);s.append('path').attr('d','M'+x(p.length-1)+','+y(p.at(-1)?.v||0)+'L'+x(p.length-1+hor)+','+y(f)).attr('stroke','#b05c2a').attr('stroke-dasharray','4 3').attr('fill','none').attr('stroke-width',2)}s.append('text').attr('class','legend').attr('x',margin.l).attr('y',h-4).text('Teal observed Â· dashed amber forecast with 80% interval')}
-function heat(){let e=$('#heat');e.innerHTML='';let rows=D.heatmap.filter(r=>r.disease===dis&&(sel==='ALL'||r.district===sel)),ds=sel==='ALL'?D.districts:[sel],max=d3.max(rows,r=>r.cases||0)||5;ds.forEach(d=>{let row=document.createElement('div');row.className='gridrow';let name=document.createElement('span');name.className='district-name';name.textContent=d;row.append(name);for(let w=1;w<=52;w++){let v=d3.sum(rows.filter(r=>r.district===d&&r.week===w),r=>r.cases||0),c=document.createElement('span');c.className='cell';c.title=d+' - week '+w+': '+(v<5?'suppressed':v+' cases');c.style.background=v<5?'repeating-linear-gradient(135deg,#eee,#eee 3px,#ccd6da 3px,#ccd6da 5px)':d3.interpolateViridis(v/max);c.onclick=()=>choose(d);row.append(c)}e.append(row)})}
-function allocation(){let e=$('#allocation');e.innerHTML='';let a=D.allocations.filter(r=>sel==='ALL'||r.district===sel).sort((x,y)=>y.recommended_units-x.recommended_units),t=document.createElement('table');t.className='tbl';t.innerHTML='<thead><tr><th>District</th><th>Demand</th><th>Stock*</th><th>Suggested</th></tr></thead>';let b=t.createTBody();a.forEach(r=>{let tr=b.insertRow();[r.district,r.demand_units,r.current_stock_units,r.recommended_units].forEach(v=>tr.insertCell().textContent=v)});e.append(t);let p=document.createElement('p');p.style.cssText='font-size:10px;color:#667887';p.textContent='* Synthetic illustrative stock. Budget curve: '+D.budget_curve.map(r=>'BDT '+r.budget/1000+'k / '+r.units_funded+' units').join(' | ');e.append(p)}
-function warnings(){let e=$('#warnings');e.innerHTML='';let a=D.alerts.filter(r=>r.disease===dis&&(sel==='ALL'||r.district===sel)).sort((x,y)=>y.score-x.score).slice(0,20),t=document.createElement('table');t.className='tbl';t.innerHTML='<thead><tr><th>District</th><th>Week</th><th>Observed</th><th>Expected</th><th>Score</th></tr></thead>';let b=t.createTBody();a.forEach(r=>{let tr=b.insertRow();tr.onclick=()=>choose(r.district);[r.district,r.year+'-W'+r.week,r.observed,r.expected,r.score].forEach((v,i)=>{let c=tr.insertCell();c.textContent=v;if(i===4)c.className='warn'})});e.append(t)}
-function quality(){let e=$('#quality');e.innerHTML='';[['Rows in',D.quality.rows_in],['Valid silver',D.quality.rows_clean],['Quarantined',D.quality.rows_quarantined],['Rules',D.quality.rule_count]].forEach(x=>{let d=document.createElement('div');d.className='metric';d.innerHTML='<b>'+Number(x[1]).toLocaleString()+'</b><small>'+x[0]+'</small>';e.append(d)})}
-fetch('../data/serving/dashboard.json').then(r=>{if(!r.ok)throw Error('Build lake and analytics outputs first.');return r.json()}).then(init).catch(e=>$('#fresh').textContent=e.message);
+﻿let D;
+let selectedDistrict = "ALL";
+let selectedDisease = "dengue";
+let forecastHorizon = 1;
+const $ = (selector) => document.querySelector(selector);
 
-
-
+function init(data, boundaries) {
+  D = data;
+  D.boundaries = boundaries;
+  $("#fresh").textContent = new Date(data.generated_at).toLocaleString();
+  data.diseases.forEach((value) => $("#disease").add(new Option(value, value)));
+  data.districts.forEach((value) => $("#district").add(new Option(value, value)));
+  selectedDisease = data.diseases[0] || selectedDisease;
+  $("#disease").value = selectedDisease;
+  $("#disease").addEventListener("change", () => {
+    selectedDisease = $("#disease").value;
+    render();
+  });
+  $("#district").addEventListener("change", () => {
+    selectedDistrict = $("#district").value;
+    render();
+  });
+  $("#horizon").addEventListener("change", () => {
+    forecastHorizon = Number($("#horizon").value);
+    render();
+  });
+  $("#reset").addEventListener("click", () => {
+    selectedDistrict = "ALL";
+    selectedDisease = data.diseases[0];
+    forecastHorizon = 1;
+    $("#district").value = "ALL";
+    $("#disease").value = selectedDisease;
+    $("#horizon").value = "1";
+    render();
+  });
+  render();
+}
+function chooseDistrict(name) {
+  selectedDistrict = selectedDistrict === name ? "ALL" : name;
+  $("#district").value = selectedDistrict;
+  render();
+}
+function render() {
+  drawMap();
+  drawSeries();
+  drawHeatmap();
+  drawAllocation();
+  drawWarnings();
+  drawQuality();
+}
+function noData(element, message) {
+  element.innerHTML = "";
+  const state = document.createElement("div");
+  state.className = "empty-state";
+  state.textContent = message;
+  element.append(state);
+}
+function selectedRows(rows) {
+  return rows.filter((row) => row.disease === selectedDisease &&
+    (selectedDistrict === "ALL" || row.district === selectedDistrict));
+}
+function drawMap() {
+  const element = $("#map");
+  element.innerHTML = "";
+  const width = element.clientWidth || 620;
+  const height = 270;
+  const svg = d3.select(element).append("svg").attr("viewBox", "0 0 " + width + " " + height);
+  const rows = D.heatmap.filter((row) => row.disease === selectedDisease);
+  if (!rows.length) return noData(element, "No district data matches this disease.");
+  const latestYear = d3.max(rows, (row) => row.year);
+  const counts = new Map();
+  rows.filter((row) => row.year === latestYear).forEach((row) => {
+    counts.set(row.district, (counts.get(row.district) || 0) + (row.cases || 0));
+  });
+  const rates = new Map(D.districts.map((district) => {
+    const denominator = Number(D.population[district]) || 0;
+    const count = counts.get(district) || 0;
+    return [district, denominator ? count / denominator * 100000 : 0];
+  }));
+  const maxRate = d3.max([...rates.values()]) || 1;
+  const color = d3.scaleSequential([0, maxRate], d3.interpolateViridis);
+  const features = D.boundaries && D.boundaries.features;
+  if (features && features.length) {
+    $("#map-tag").textContent = "ADM2 CHOROPLETH";
+    const collection = { type: "FeatureCollection", features };
+    const projection = d3.geoMercator().fitSize([width - 12, height - 12], collection);
+    const path = d3.geoPath(projection);
+    const districtName = (feature) => feature.properties.district ||
+      feature.properties.shapeName || feature.properties.name;
+    svg.selectAll("path").data(features).join("path")
+      .attr("d", path)
+      .attr("fill", (feature) => {
+        const name = districtName(feature);
+        const count = counts.get(name) || 0;
+        return count > 0 && count < 5 ? "#dce4e7" : color(rates.get(name) || 0);
+      })
+      .attr("stroke", (feature) => districtName(feature) === selectedDistrict ? "#102d3e" : "#fff")
+      .attr("stroke-width", (feature) => districtName(feature) === selectedDistrict ? 2 : .7)
+      .style("cursor", "pointer")
+      .on("click", (event, feature) => chooseDistrict(districtName(feature)))
+      .append("title").text((feature) => {
+        const name = districtName(feature);
+        const count = counts.get(name) || 0;
+        const rate = rates.get(name) || 0;
+        return name + ": " + (count > 0 && count < 5 ? "count suppressed" :
+          count.toLocaleString() + " reports") + " | " + rate.toFixed(1) +
+          " reports per 100,000 | " + latestYear;
+      });
+    return;
+  }
+  $("#map-tag").textContent = "SCHEMATIC FALLBACK";
+  const columns = 8;
+  D.districts.forEach((district, index) => {
+    const x = 10 + (index % columns) * (width - 20) / columns;
+    const y = 8 + Math.floor(index / columns) * 29;
+    const tileWidth = (width - 20) / columns - 3;
+    const value = counts.get(district) || 0;
+    const group = svg.append("g").style("cursor", "pointer")
+      .on("click", () => chooseDistrict(district));
+    group.append("rect").attr("class", "tile")
+      .attr("x", x).attr("y", y).attr("width", tileWidth).attr("height", 23).attr("rx", 5)
+      .attr("fill", value > 0 && value < 5 ? "#dce4e7" : color(rates.get(district) || 0));
+    group.append("text").attr("x", x + tileWidth / 2).attr("y", y + 14)
+      .attr("text-anchor", "middle").attr("fill", (rates.get(district) || 0) > maxRate * .58 ? "#fff" : "#203645")
+      .attr("font-size", "8px").text(district.slice(0, 9));
+    group.append("title").text(district + " - schematic tile");
+  });
+}
+function drawSeries() {
+  const element = $("#series");
+  element.innerHTML = "";
+  const totals = new Map();
+  selectedRows(D.heatmap).forEach((row) => {
+    const key = row.year + "-W" + String(row.week).padStart(2, "0");
+    totals.set(key, (totals.get(key) || 0) + (row.cases || 0));
+  });
+  const points = [...totals].sort((a, b) => a[0].localeCompare(b[0]))
+    .slice(-24).map(([week, value]) => ({ week, value }));
+  if (!points.length) return noData(element, "No weekly observations match this selection.");
+  const forecasts = selectedRows(D.forecasts).filter((row) => row.horizon === forecastHorizon);
+  const forecast = d3.sum(forecasts, (row) => row.mean || 0);
+  const lower = d3.sum(forecasts, (row) => row.lower80 || 0);
+  const upper = d3.sum(forecasts, (row) => row.upper80 || 0);
+  const width = element.clientWidth || 560;
+  const height = 250;
+  const margin = { top: 14, right: 15, bottom: 38, left: 43 };
+  const x = d3.scaleLinear([0, Math.max(1, points.length - 1 + forecastHorizon)],
+    [margin.left, width - margin.right]);
+  const y = d3.scaleLinear([0, Math.max(1, d3.max(points, (row) => row.value) || 1, upper * 1.15)],
+    [height - margin.bottom, margin.top]);
+  const svg = d3.select(element).append("svg").attr("viewBox", "0 0 " + width + " " + height);
+  svg.append("g").attr("class", "axis").attr("transform", "translate(0," + (height - margin.bottom) + ")")
+    .call(d3.axisBottom(x).ticks(5).tickFormat((index) =>
+      points[Math.round(index)] ? points[Math.round(index)].week : "Forecast"));
+  svg.append("g").attr("class", "axis").attr("transform", "translate(" + margin.left + ",0)")
+    .call(d3.axisLeft(y).ticks(5));
+  svg.append("path").datum(points).attr("fill", "none").attr("stroke", "#167b76")
+    .attr("stroke-width", 2.5).attr("d", d3.line().x((row, i) => x(i)).y((row) => y(row.value)));
+  svg.selectAll(".observation").data(points).join("circle")
+    .attr("class", "observation").attr("cx", (row, i) => x(i)).attr("cy", (row) => y(row.value))
+    .attr("r", 2.5).attr("fill", "#167b76")
+    .append("title").text((row) => row.week + ": " +
+      (row.value < 5 ? "suppressed" : row.value + " reported cases"));
+  if (forecasts.length) {
+    const x1 = x(points.length - 1);
+    const x2 = x(points.length - 1 + forecastHorizon);
+    svg.append("rect").attr("x", x1).attr("y", y(upper))
+      .attr("width", Math.max(3, x2 - x1)).attr("height", Math.max(2, y(lower) - y(upper)))
+      .attr("fill", "#eacb91").attr("opacity", .55);
+    svg.append("path")
+      .attr("d", "M" + x1 + "," + y(points[points.length - 1].value) + "L" + x2 + "," + y(forecast))
+      .attr("fill", "none").attr("stroke", "#b8793e").attr("stroke-width", 2)
+      .attr("stroke-dasharray", "5 4");
+  }
+}
+function drawHeatmap() {
+  const element = $("#heat");
+  element.innerHTML = "";
+  const rows = selectedRows(D.heatmap);
+  const districts = selectedDistrict === "ALL" ? D.districts : [selectedDistrict];
+  const max = d3.max(rows, (row) => row.cases || 0) || 5;
+  districts.forEach((district) => {
+    const rowElement = document.createElement("div");
+    rowElement.className = "gridrow";
+    const name = document.createElement("span");
+    name.className = "district-name";
+    name.textContent = district;
+    rowElement.append(name);
+    for (let week = 1; week <= 52; week += 1) {
+      const value = d3.sum(rows.filter((row) => row.district === district && row.week === week),
+        (row) => row.cases || 0);
+      const cell = document.createElement("span");
+      cell.className = "cell";
+      cell.title = district + " - week " + week + ": " +
+        (value < 5 ? "suppressed" : value + " reports");
+      cell.style.background = value < 5
+        ? "repeating-linear-gradient(135deg,#eee,#eee 3px,#ccd6da 3px,#ccd6da 5px)"
+        : d3.interpolateViridis(value / max);
+      cell.addEventListener("click", () => chooseDistrict(district));
+      rowElement.append(cell);
+    }
+    element.append(rowElement);
+  });
+}
+function drawAllocation() {
+  const element = $("#allocation");
+  element.innerHTML = "";
+  const rows = D.allocations.filter((row) =>
+    selectedDistrict === "ALL" || row.district === selectedDistrict)
+    .sort((a, b) => b.recommended_units - a.recommended_units);
+  if (!rows.length) return noData(element, "No allocation rows match this selection.");
+  const table = document.createElement("table");
+  table.className = "tbl";
+  table.innerHTML = "<thead><tr><th>District</th><th>Demand</th><th>Stock*</th><th>Suggested</th></tr></thead>";
+  const body = table.createTBody();
+  rows.forEach((row) => {
+    const tr = body.insertRow();
+    tr.addEventListener("click", () => chooseDistrict(row.district));
+    [row.district, row.demand_units, row.current_stock_units, row.recommended_units]
+      .forEach((value) => { tr.insertCell().textContent = value; });
+  });
+  element.append(table);
+  const note = document.createElement("p");
+  note.className = "table-note";
+  note.textContent = "Budget scenarios: " + D.budget_curve.map((row) =>
+    "BDT " + (row.budget / 1000) + "k / " + row.units_funded + " units").join(" | ");
+  element.append(note);
+}
+function drawWarnings() {
+  const element = $("#warnings");
+  element.innerHTML = "";
+  const rows = selectedRows(D.alerts).sort((a, b) => b.score - a.score).slice(0, 20);
+  if (!rows.length) return noData(element, "No threshold flags for this selection.");
+  const table = document.createElement("table");
+  table.className = "tbl";
+  table.innerHTML = "<thead><tr><th>District</th><th>Week</th><th>Observed</th><th>Expected</th><th>Score</th></tr></thead>";
+  const body = table.createTBody();
+  rows.forEach((row) => {
+    const tr = body.insertRow();
+    tr.addEventListener("click", () => chooseDistrict(row.district));
+    [row.district, row.year + "-W" + row.week, row.observed, row.expected, row.score]
+      .forEach((value, index) => {
+        const cell = tr.insertCell();
+        cell.textContent = value;
+        if (index === 4) cell.className = "warn";
+      });
+  });
+  element.append(table);
+}
+function drawQuality() {
+  const element = $("#quality");
+  element.innerHTML = "";
+  const q = D.quality;
+  [["Rows received", q.rows_in], ["Valid silver", q.rows_clean],
+    ["Quarantined", q.rows_quarantined], ["Rules applied", q.rule_count]]
+    .forEach(([label, value]) => {
+      const metric = document.createElement("div");
+      metric.className = "metric";
+      metric.innerHTML = "<b>" + Number(value).toLocaleString() + "</b><small>" + label + "</small>";
+      element.append(metric);
+    });
+}
+Promise.all([
+  fetch("../data/serving/dashboard.json").then((response) => {
+    if (!response.ok) throw new Error("Build the lake and analytics outputs first.");
+    return response.json();
+  }),
+  fetch("../data/serving/districts.geojson")
+    .then((response) => response.ok ? response.json() : null)
+    .catch(() => null)
+]).then(([data, boundaries]) => init(data, boundaries))
+  .catch((error) => { $("#fresh").textContent = error.message; });
