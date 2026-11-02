@@ -12,7 +12,7 @@
 ## Project links
 
 - **Repository:** https://github.com/souravdev33/Episcope
-- **Presentation video:** Not recorded yet. Add a shareable YouTube or Drive link here.
+- **Presentation video:** Pending recording/submission. Replace this status with the final shareable link after upload.
 - **Technical report:** Draft at [docs/report.md](docs/report.md). Add the final report PDF to docs/ before hand-in.
 - **Policy brief:** [docs/policy_brief.md](docs/policy_brief.md)
 - **Presentation run sheet:** [docs/presentation.md](docs/presentation.md)

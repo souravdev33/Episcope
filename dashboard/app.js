@@ -63,11 +63,18 @@ function drawMap() {
   const element = $("#map");
   element.innerHTML = "";
   const width = element.clientWidth || 620;
-  const height = 270;
+  const height = 300;
   const svg = d3.select(element).append("svg").attr("viewBox", "0 0 " + width + " " + height);
   const rows = D.heatmap.filter((row) => row.disease === selectedDisease);
   if (!rows.length) return noData(element, "No district data matches this disease.");
-  const latestYear = d3.max(rows, (row) => row.year);
+  const weeksPerYear = d3.rollup(rows, (values) => new Set(values.map((row) => row.week)).size,
+    (row) => row.year);
+  const completeYears = [...weeksPerYear]
+    .filter(([, weekCount]) => weekCount >= 40)
+    .map(([year]) => Number(year));
+  const latestYear = completeYears.length
+    ? Math.max(...completeYears)
+    : d3.max(rows, (row) => row.year);
   const counts = new Map();
   rows.filter((row) => row.year === latestYear).forEach((row) => {
     counts.set(row.district, (counts.get(row.district) || 0) + (row.cases || 0));
@@ -77,18 +84,23 @@ function drawMap() {
     const count = counts.get(district) || 0;
     return [district, denominator ? count / denominator * 100000 : 0];
   }));
-  const maxRate = d3.max([...rates.values()]) || 1;
-  const color = d3.scaleSequential([0, maxRate], d3.interpolateViridis);
+  const sortedRates = [...rates.values()].sort(d3.ascending);
+  const colorMax = d3.quantile(sortedRates, 0.95) || 1;
+  const color = d3.scaleSequential([0, colorMax], d3.interpolateViridis).clamp(true);
   const features = D.boundaries && D.boundaries.features;
   if (features && features.length) {
     $("#map-tag").textContent = "ADM2 CHOROPLETH";
     const collection = { type: "FeatureCollection", features };
-    const projection = d3.geoMercator().fitSize([width - 12, height - 12], collection);
+    const projection = d3.geoIdentity().reflectY(true).fitSize([width - 24, height - 20], collection);
     const path = d3.geoPath(projection);
+    const subtitle = document.querySelector("#map-subtitle");
+    if (subtitle) subtitle.textContent = "Reported cases per 100,000 residents in " + latestYear;
     const districtName = (feature) => feature.properties.district ||
       feature.properties.shapeName || feature.properties.name;
     svg.selectAll("path").data(features).join("path")
       .attr("d", path)
+      .attr("aria-label", (feature) => districtName(feature))
+      .attr("vector-effect", "non-scaling-stroke")
       .attr("fill", (feature) => {
         const name = districtName(feature);
         const count = counts.get(name) || 0;
@@ -121,7 +133,7 @@ function drawMap() {
       .attr("x", x).attr("y", y).attr("width", tileWidth).attr("height", 23).attr("rx", 5)
       .attr("fill", value > 0 && value < 5 ? "#dce4e7" : color(rates.get(district) || 0));
     group.append("text").attr("x", x + tileWidth / 2).attr("y", y + 14)
-      .attr("text-anchor", "middle").attr("fill", (rates.get(district) || 0) > maxRate * .58 ? "#fff" : "#203645")
+      .attr("text-anchor", "middle").attr("fill", (rates.get(district) || 0) > colorMax * .58 ? "#fff" : "#203645")
       .attr("font-size", "8px").text(district.slice(0, 9));
     group.append("title").text(district + " - schematic tile");
   });
@@ -270,3 +282,6 @@ Promise.all([
     .catch(() => null)
 ]).then(([data, boundaries]) => init(data, boundaries))
   .catch((error) => { $("#fresh").textContent = error.message; });
+
+
+

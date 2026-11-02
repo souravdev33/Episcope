@@ -1,0 +1,105 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900" role="img" aria-labelledby="title desc">
+<title id="title">EpiScope data pipeline</title>
+<desc id="desc">A presentation diagram showing public and synthetic inputs flowing through Python orchestration, Apache Spark medallion data processing, analytics, the dashboard, and response-planning outputs.</desc>
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f7fafc"/><stop offset="1" stop-color="#edf3f5"/></linearGradient>
+  <linearGradient id="head" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#12354a"/><stop offset="1" stop-color="#185b68"/></linearGradient>
+  <filter id="shadow" x="-15%" y="-15%" width="130%" height="140%"><feDropShadow dx="0" dy="5" stdDeviation="8" flood-color="#193a4b" flood-opacity=".08"/></filter>
+  <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#398b8b"/></marker>
+  <marker id="arrowGold" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#bf8a3a"/></marker>
+  <style>
+    text{font-family:Inter,'Segoe UI',Arial,sans-serif;fill:#203645} .title{font-size:34px;font-weight:750;fill:#fff;letter-spacing:-.5px}.subtitle{font-size:15px;fill:#d3e4e9}.eyebrow{font-size:11px;font-weight:800;letter-spacing:1.5px;fill:#4b8f8e}.cardtitle{font-size:17px;font-weight:750;fill:#16394c}.small{font-size:12px;fill:#5b707d}.body{font-size:13px;fill:#314c5b}.tiny{font-size:10.5px;fill:#607681}.tag{font-size:10px;font-weight:800;letter-spacing:1px}.legend-light{fill:#e6f2f3}.footer-title{fill:#8ed3c9}.footer-copy{fill:#e2edf0}
+  </style>
+</defs>
+<rect width="1600" height="900" fill="url(#bg)"/>
+<rect x="0" y="0" width="1600" height="142" fill="url(#head)"/>
+<rect x="55" y="39" width="52" height="52" rx="15" fill="#20a096"/><text x="81" y="75" text-anchor="middle" font-size="28" font-weight="800" fill="#fff">E</text>
+<text x="128" y="61" class="title">EpiScope Data Pipeline</text>
+<text x="129" y="91" class="subtitle">Bangladesh district disease surveillance &amp; response-planning prototype</text>
+<g transform="translate(1112 54)"><circle cx="8" cy="8" r="7" fill="#59c1ad"/><text x="23" y="12" class="legend-light" font-size="12">Public reference data</text><circle cx="188" cy="8" r="7" fill="#f1bd66"/><text x="203" y="12" class="legend-light" font-size="12">Synthetic operational data</text></g>
+<text x="55" y="183" class="eyebrow">END-TO-END WORKFLOW</text>
+
+<!-- Source column -->
+<g filter="url(#shadow)"><rect x="50" y="205" width="300" height="365" rx="16" fill="#fff" stroke="#dce7eb"/></g>
+<text x="75" y="241" class="cardtitle">1. Data sources</text>
+<text x="75" y="261" class="small">Reference context + generated records</text>
+<rect x="72" y="280" width="256" height="126" rx="11" fill="#eef8f6" stroke="#c6e4de"/>
+<rect x="72" y="280" width="5" height="126" rx="2" fill="#248b80"/>
+<text x="91" y="305" class="tag" fill="#237d75">PUBLIC REFERENCE · S1–S3</text>
+<text x="91" y="330" class="body" font-weight="700">District boundaries</text><text x="91" y="347" class="tiny">geoBoundaries · 64 ADM2 districts</text>
+<text x="91" y="367" class="body" font-weight="700">Population + weather</text><text x="91" y="384" class="tiny">WorldPop age/sex · Open-Meteo, 2021–25</text>
+<rect x="72" y="420" width="256" height="128" rx="11" fill="#fff7e9" stroke="#f0ddbb"/>
+<rect x="72" y="420" width="5" height="128" rx="2" fill="#bf8a3a"/>
+<text x="91" y="445" class="tag" fill="#a8752e">SYNTHETIC INPUTS · S4–S6</text>
+<text x="91" y="470" class="body" font-weight="700">Encounter line list</text><text x="91" y="487" class="tiny">1M demo rows · SF=1 targets 25M</text>
+<text x="91" y="507" class="body" font-weight="700">Facilities + stock snapshot</text><text x="91" y="524" class="tiny">640 facilities · generated inventory</text>
+
+<!-- Orchestration -->
+<g filter="url(#shadow)"><rect x="390" y="205" width="250" height="365" rx="16" fill="#fff" stroke="#dce7eb"/></g>
+<text x="415" y="241" class="cardtitle">2. Orchestration</text>
+<text x="415" y="261" class="small">Python · repeatable local run</text>
+<rect x="414" y="285" width="202" height="75" rx="10" fill="#f3f7fa" stroke="#dce5e9"/>
+<text x="432" y="311" class="tag" fill="#526c78">ACQUIRE &amp; CACHE</text><text x="432" y="334" class="body">Public S1–S3 references</text><text x="432" y="350" class="tiny">boundaries · population · weather</text>
+<rect x="414" y="375" width="202" height="92" rx="10" fill="#fff7e9" stroke="#f0ddbb"/>
+<text x="432" y="401" class="tag" fill="#a8752e">GENERATE S4–S6</text><text x="432" y="424" class="body">Seeded synthetic data</text><text x="432" y="443" class="tiny">SF controls record volume</text><text x="432" y="459" class="tiny">2021–2025 · all 64 districts</text>
+<rect x="414" y="482" width="202" height="58" rx="10" fill="#f3f7fa" stroke="#dce5e9"/>
+<text x="432" y="507" class="tag" fill="#526c78">RUN PIPELINE</text><text x="432" y="527" class="tiny">Acquire → generate → Spark → analytics</text>
+
+<!-- Spark lake -->
+<g filter="url(#shadow)"><rect x="680" y="205" width="480" height="365" rx="16" fill="#fff" stroke="#dce7eb"/></g>
+<text x="705" y="241" class="cardtitle">3. Apache Spark data lake</text>
+<text x="705" y="261" class="small">Parquet storage · batch lineage · weekly partitions</text>
+<rect x="704" y="294" width="432" height="231" rx="12" fill="#f5f8fa" stroke="#e2eaee"/>
+<rect x="720" y="316" width="91" height="157" rx="9" fill="#eaf1f5" stroke="#cfdee5"/>
+<text x="765" y="342" text-anchor="middle" class="tag" fill="#527184">BRONZE</text><text x="765" y="369" text-anchor="middle" class="body" font-weight="700">Raw</text><text x="765" y="388" text-anchor="middle" class="tiny">encounters</text><text x="765" y="407" text-anchor="middle" class="tiny">checksums</text><text x="765" y="426" text-anchor="middle" class="tiny">batch IDs</text><text x="765" y="451" text-anchor="middle" class="tiny">Parquet</text>
+<path d="M812 394 H824" fill="none" stroke="#398b8b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="830" y="316" width="91" height="157" rx="9" fill="#fff5e8" stroke="#eedbbd"/>
+<text x="875" y="342" text-anchor="middle" class="tag" fill="#ad792f">QUALITY</text><text x="875" y="369" text-anchor="middle" class="body" font-weight="700">15 rules</text><text x="875" y="391" text-anchor="middle" class="tiny">duplicates</text><text x="875" y="410" text-anchor="middle" class="tiny">age / codes</text><text x="875" y="429" text-anchor="middle" class="tiny">facility / dates</text><text x="875" y="451" text-anchor="middle" class="tiny">quarantine</text>
+<path d="M922 394 H934" fill="none" stroke="#398b8b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="940" y="316" width="91" height="157" rx="9" fill="#eef8f6" stroke="#c6e4de"/>
+<text x="985" y="342" text-anchor="middle" class="tag" fill="#237d75">SILVER</text><text x="985" y="369" text-anchor="middle" class="body" font-weight="700">Clean</text><text x="985" y="391" text-anchor="middle" class="tiny">deduplicated</text><text x="985" y="410" text-anchor="middle" class="tiny">hashed IDs</text><text x="985" y="429" text-anchor="middle" class="tiny">disease / age</text><text x="985" y="451" text-anchor="middle" class="tiny">weekly keys</text>
+<path d="M1032 394 H1044" fill="none" stroke="#398b8b" stroke-width="2" marker-end="url(#arrow)"/>
+<rect x="1050" y="316" width="70" height="157" rx="9" fill="#e9f1fa" stroke="#cbdbea"/>
+<text x="1085" y="342" text-anchor="middle" class="tag" fill="#47749b">GOLD</text><text x="1085" y="369" text-anchor="middle" class="body" font-weight="700">Weekly</text><text x="1085" y="391" text-anchor="middle" class="tiny">district ×</text><text x="1085" y="410" text-anchor="middle" class="tiny">disease</text><text x="1085" y="429" text-anchor="middle" class="tiny">weather join</text><text x="1085" y="451" text-anchor="middle" class="tiny">aggregates</text>
+<text x="920" y="502" text-anchor="middle" class="tiny">Invalid records are retained separately for quality review.</text>
+
+<!-- Analytics -->
+<g filter="url(#shadow)"><rect x="1200" y="205" width="350" height="365" rx="16" fill="#fff" stroke="#dce7eb"/></g>
+<text x="1225" y="241" class="cardtitle">4. Analytics &amp; serving</text>
+<text x="1225" y="261" class="small">Python analytics · dashboard JSON + map</text>
+<circle cx="1233" cy="302" r="4" fill="#248b80"/><text x="1248" y="307" class="body">Weekly trends + seasonal heatmap</text>
+<circle cx="1233" cy="338" r="4" fill="#248b80"/><text x="1248" y="343" class="body">District rates per 100,000</text>
+<circle cx="1233" cy="374" r="4" fill="#bf8a3a"/><text x="1248" y="379" class="body">8-week threshold flags</text>
+<circle cx="1233" cy="410" r="4" fill="#bf8a3a"/><text x="1248" y="415" class="body">Short-horizon forecast prototype</text>
+<circle cx="1233" cy="446" r="4" fill="#bf8a3a"/><text x="1248" y="451" class="body">Illustrative stock allocation</text>
+<rect x="1224" y="478" width="302" height="58" rx="9" fill="#fff4f1" stroke="#efd9d2"/>
+<text x="1240" y="501" class="tag" fill="#a44e43">HUMAN REVIEW REQUIRED</text><text x="1240" y="521" class="tiny">Flags and forecasts are not validated alerts.</text>
+
+<!-- Main flow arrows -->
+<path d="M352 388 H382" fill="none" stroke="#398b8b" stroke-width="3" marker-end="url(#arrow)"/>
+<path d="M642 388 H672" fill="none" stroke="#398b8b" stroke-width="3" marker-end="url(#arrow)"/>
+<path d="M1162 388 H1192" fill="none" stroke="#398b8b" stroke-width="3" marker-end="url(#arrow)"/>
+
+<!-- Serving outputs -->
+<path d="M1375 575 V615 H497 V642" fill="none" stroke="#398b8b" stroke-width="2.5" marker-end="url(#arrow)"/><path d="M1087 615 V642" fill="none" stroke="#398b8b" stroke-width="2.5" marker-end="url(#arrow)"/>
+<text x="55" y="630" class="eyebrow">5. PROJECT OUTPUTS</text>
+<g filter="url(#shadow)"><rect x="230" y="650" width="535" height="132" rx="15" fill="#fff" stroke="#dce7eb"/></g>
+<rect x="230" y="650" width="8" height="132" rx="4" fill="#248b80"/>
+<text x="260" y="682" class="cardtitle">Interactive dashboard</text>
+<text x="260" y="708" class="body">Bangladesh district choropleth · trends · weekly heatmap</text>
+<text x="260" y="733" class="body">Data-quality summary · district filters · source metadata</text>
+<text x="260" y="759" class="tiny">Served locally from dashboard/ with data/serving outputs</text>
+<g filter="url(#shadow)"><rect x="805" y="650" width="565" height="132" rx="15" fill="#fff" stroke="#dce7eb"/></g>
+<rect x="805" y="650" width="8" height="132" rx="4" fill="#bf8a3a"/>
+<text x="835" y="682" class="cardtitle">Planning support</text>
+<text x="835" y="708" class="body">Review signals, explore forecast scenarios, compare stock needs</text>
+<text x="835" y="733" class="body">Use results as a teaching prototype—not as clinical guidance</text>
+<text x="835" y="759" class="tiny">Prototype models need labeled backtesting before operational use</text>
+
+
+<rect x="50" y="812" width="1500" height="54" rx="12" fill="#12354a"/>
+<text x="76" y="836" class="footer-title" font-size="11" font-weight="800" letter-spacing="1.1">DATA &amp; INTERPRETATION NOTE</text>
+<text x="76" y="855" class="footer-copy" font-size="12">Encounter, facility and stock inputs are synthetic. Boundaries, modeled population and weather are public references; displayed alerts and forecasts are exploratory.</text>
+</svg>
+
+

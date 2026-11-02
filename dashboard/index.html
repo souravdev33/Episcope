@@ -31,12 +31,6 @@
         <span class="update-note">Synthetic demonstration</span>
       </div>
     </section>
-
-    <aside class="notice" role="note">
-      <span class="notice-icon" aria-hidden="true">i</span>
-      <p><strong>Prototype only.</strong> This dashboard uses synthetic data and is not an official health forecast. District boundaries are loaded from the public GeoBoundaries source; if unavailable, the view falls back to schematic tiles. Counts from 1 to 4 are suppressed in selected views.</p>
-    </aside>
-
     <section class="filter-panel" aria-label="Dashboard filters">
       <div class="filter-heading">
         <div><span class="section-kicker">EXPLORE THE DATA</span><h2>Filters</h2></div>
@@ -51,9 +45,9 @@
 
     <section class="dashboard-grid" aria-label="Surveillance dashboard">
       <article class="card map-card">
-        <div class="card-heading"><div><span class="section-kicker">SPATIAL SIGNAL</span><h2>District incidence</h2><p>Latest reported cases per 100,000 residents</p></div><span class="view-tag" id="map-tag">LOADING MAP</span></div>
+        <div class="card-heading"><div><span class="section-kicker">SPATIAL SIGNAL</span><h2>District incidence</h2><p id="map-subtitle">Reported cases per 100,000 residents</p></div><span class="view-tag" id="map-tag">LOADING MAP</span></div>
         <div id="map" class="viz map-viz"></div>
-        <div class="map-foot"><span><i class="legend-low"></i> Lower reports</span><span class="legend-gradient" aria-hidden="true"></span><span>Higher reports</span><span class="map-foot-note">Select a tile to filter the dashboard</span></div>
+        <div class="map-foot"><span><i class="legend-low"></i> Lower reports</span><span class="legend-gradient" aria-hidden="true"></span><span>Higher reports</span><span class="map-foot-note">Select a district to filter the dashboard</span></div>
       </article>
 
       <article class="card trend-card">
@@ -89,7 +83,11 @@
 
     <footer class="page-footer"><span><strong>EpiScope</strong> - CSE 4345 Big Data Analytics</span><span>Aggregated synthetic demonstration. Interpret with local surveillance expertise.</span></footer>
   </main>
-  <script src="app.js"></script>
+  <script src="app.js?v=20261101-mapfix2"></script>
 </body>
 </html>
+
+
+
+
 
